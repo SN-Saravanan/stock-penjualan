@@ -1,0 +1,542 @@
+@import "tailwindcss";
+
+:root {
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  color: #0f172a;
+  background: #f8fafc;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Portals keep dialogs outside transformed headers and page stacking contexts. */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  outline: none;
+}
+.modal-root > .fixed > .relative:not(.modal-wrapper):not(.modal-viewport) {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.modal-root .modal-wrapper > .shadow-2xl {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.modal-root input, .modal-root select, .modal-root textarea {
+  min-width: 0;
+}
+.modal-root p, .modal-root h2, .modal-root h3 {
+  overflow-wrap: anywhere;
+}
+.form-input {
+  width: 100%;
+  height: 2.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: white;
+  padding-left: 0.875rem;
+  padding-right: 0.875rem;
+  font-size: 0.875rem;
+  color: #0f172a;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px #dbeafe;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #sales-report-print,
+  #sales-report-print * {
+    visibility: visible;
+  }
+
+  #sales-report-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  #sales-report-print {
+    box-shadow: none !important;
+  }
+}
+
+/* =========================================================
+   GLOBAL SONNER TOAST
+   SISTEM STOK PENJUALAN
+========================================================= */
+
+[data-sonner-toaster] {
+  --width: 370px;
+  z-index: 9999 !important;
+}
+
+/* Toast utama */
+[data-sonner-toast].stock-sales-toast {
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  min-height: 58px;
+  font-family: inherit !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+
+  box-shadow:
+    0 16px 48px rgba(15, 23, 42, 0.1),
+    0 4px 12px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+
+  /*
+    Jangan mengganti property transform.
+    Sonner menggunakan transform untuk posisi,
+    stacking, dan swipe.
+  */
+
+  scale: 0.96;
+  opacity: 0;
+
+  transition:
+    transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 250ms cubic-bezier(0.22, 1, 0.36, 1),
+    scale 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 280ms ease,
+    box-shadow 200ms ease !important;
+}
+
+/* Toast selesai masuk — subtle overshoot */
+[data-sonner-toast].stock-sales-toast[data-mounted="true"] {
+  scale: 1;
+  opacity: 1;
+}
+
+/* Toast mulai keluar */
+[data-sonner-toast].stock-sales-toast[data-removed="true"] {
+  scale: 0.97;
+  opacity: 0;
+}
+
+/* Judul */
+.stock-sales-toast-title {
+  font-size: 14px !important;
+  font-weight: 650 !important;
+  line-height: 1.4 !important;
+  letter-spacing: -0.01em;
+}
+
+/* Description */
+.stock-sales-toast-description {
+  margin-top: 2px !important;
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+  opacity: 0.78;
+}
+
+/* Icon */
+[data-sonner-toast].stock-sales-toast [data-icon] {
+  width: 19px !important;
+  height: 19px !important;
+  flex-shrink: 0;
+}
+
+/* Close Button */
+.stock-sales-toast-close {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 9999px !important;
+  opacity: 0.5;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    opacity 160ms ease !important;
+}
+
+.stock-sales-toast-close:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+/* =========================================================
+   TYPE-SPECIFIC COLORS & SHADOWS
+========================================================= */
+
+[data-sonner-toast].stock-sales-toast[data-type="success"] {
+  border-color: rgba(16, 185, 129, 0.2) !important;
+  box-shadow:
+    0 16px 48px rgba(16, 185, 129, 0.12),
+    0 4px 12px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+[data-sonner-toast].stock-sales-toast[data-type="error"] {
+  border-color: rgba(239, 68, 68, 0.2) !important;
+  box-shadow:
+    0 16px 48px rgba(239, 68, 68, 0.12),
+    0 4px 12px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+[data-sonner-toast].stock-sales-toast[data-type="warning"] {
+  border-color: rgba(245, 158, 11, 0.2) !important;
+  box-shadow:
+    0 16px 48px rgba(245, 158, 11, 0.14),
+    0 4px 12px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+[data-sonner-toast].stock-sales-toast[data-type="info"] {
+  border-color: rgba(37, 99, 235, 0.2) !important;
+  box-shadow:
+    0 16px 48px rgba(37, 99, 235, 0.12),
+    0 4px 12px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+[data-sonner-toast].stock-sales-toast[data-type="loading"] {
+  background: rgba(239, 246, 255, 0.97) !important;
+  border-color: rgba(147, 197, 253, 0.4) !important;
+  color: rgb(29, 78, 216) !important;
+  box-shadow:
+    0 16px 48px rgba(37, 99, 235, 0.1),
+    0 4px 12px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Loading spinner pulse */
+[data-sonner-toast].stock-sales-toast[data-type="loading"] [data-icon] {
+  animation: toast-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes toast-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* =========================================================
+   MOBILE — Bottom Tab Bar safe
+========================================================= */
+
+@media (max-width: 600px) {
+  [data-sonner-toaster] {
+    --width: calc(100vw - 24px);
+  }
+
+  .notification-animation {
+    animation: notificationIn 0.2s ease-out;
+  }
+
+  [data-sonner-toast].stock-sales-toast {
+    width: calc(100vw - 24px) !important;
+    min-height: 52px;
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+  }
+
+  .stock-sales-toast-title {
+    font-size: 13px !important;
+  }
+
+  .stock-sales-toast-description {
+    font-size: 11.5px !important;
+  }
+}
+
+/* =========================================================
+  ACCESSIBILITY — REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast].stock-sales-toast {
+    scale: 1 !important;
+    opacity: 1 !important;
+    transition: opacity 120ms linear !important;
+  }
+}
+
+/* =========================================================
+   NOTIFICATION DROPDOWN ANIMATION
+========================================================= */
+
+@keyframes notificationIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-animation {
+    animation: none !important;
+  }
+}
+
+/* =========================================================
+  PROFILE DROPDOWN ANIMATION
+========================================================= */
+
+@keyframes profileMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================================
+   PROFILE / CHANGE PASSWORD MODAL
+========================================================= */
+
+@keyframes modalBackdropIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes profileModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="profileModalIn"],
+  [class*="modalBackdropIn"] {
+    animation: none !important;
+  }
+}
+
+/* =========================================================
+   FLOATING BOTTOM TAB BAR
+========================================================= */
+
+@keyframes bottomBarEnter {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================================
+   PREMIUM ADMIN BOTTOM NAV
+========================================================= */
+
+@keyframes adminBottomSheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bottomSheetBackdropIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Smooth rendering */
+.admin-bottom-nav {
+  -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0);
+}
+
+/* Safe area helper */
+.safe-bottom {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* Disable heavy animation when requested */
+@media (prefers-reduced-motion: reduce) {
+  [class*="adminBottomSheetIn"],
+  [class*="bottomSheetBackdropIn"] {
+    animation: none !important;
+  }
+}
+
+/* =========================================================
+   PREMIUM EMPLOYEE BOTTOM TAB BAR
+========================================================= */
+
+@keyframes employeeTabIndicator {
+  from {
+    opacity: 0;
+    transform: scaleX(0.35) translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1) translateY(0);
+  }
+}
+
+/* GPU rendering untuk floating navigation */
+.employee-bottom-nav {
+  -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  [class*="employeeTabIndicator"] {
+    animation: none !important;
+  }
+}
+/* =========================================================
+  GLOBAL RESPONSIVE FOUNDATION
+========================================================= */
+
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+/* Prevent iOS auto zoom on form input */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Better touch target */
+@media (pointer: coarse) {
+  button,
+  a {
+    min-height: 40px;
+  }
+}
