@@ -52,8 +52,33 @@ function EmployeeDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+    let ignore = false;
+
+    api
+      .get("/dashboard/employee")
+      .then((response) => {
+        if (!ignore) {
+          setDashboard(response.data.data);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error("Employee dashboard error:", error);
+        toast.error(
+          error.response?.data?.message || "Gagal mengambil dashboard karyawan",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);

@@ -63,8 +63,34 @@ function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+    let ignore = false;
+
+    api
+      .get("/dashboard/admin")
+      .then((response) => {
+        if (!ignore) {
+          setDashboard(response.data.data);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error("Dashboard error:", error);
+
+        toast.error(
+          error.response?.data?.message || "Gagal mengambil data dashboard",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);

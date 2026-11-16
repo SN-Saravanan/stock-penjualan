@@ -12,6 +12,71 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../services/api";
 import useAuth from "../../hooks/useAuth";
 
+function buildStockNotifications(products) {
+  const result = products
+    .map((product) => {
+      const stock = Number(product.stock) || 0;
+
+      const minimumStock = Number(product.minimum_stock) || 0;
+
+      // ==============================
+      // HABIS
+      // ==============================
+
+      if (stock <= 0) {
+        return {
+          id: `stock-out-${product.id}-${stock}`,
+
+          productId: product.id,
+
+          type: "out",
+
+          title: "Stok Habis",
+
+          message: `${product.name} (${product.code}) sudah habis.`,
+
+          stock,
+
+          priority: 1,
+        };
+      }
+
+      // ==============================
+      // MENIPIS
+      // ==============================
+
+      if (stock <= minimumStock) {
+        return {
+          id: `stock-low-${product.id}-${stock}`,
+
+          productId: product.id,
+
+          type: "low",
+
+          title: "Stok Menipis",
+
+          message: `${product.name} (${product.code}) tersisa ${stock}.`,
+
+          stock,
+
+          priority: 2,
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+
+      return a.message.localeCompare(b.message);
+    });
+
+  return result;
+}
+
 function NotificationMenu() {
   const { user } = useAuth();
   return user ? <UserNotifications key={user.id} userId={user.id} /> : null;
@@ -30,7 +95,9 @@ function UserNotifications({ userId }) {
     try {
       const parsed = JSON.parse(localStorage.getItem(storageKey) || "[]");
       return Array.isArray(parsed) ? parsed : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
 
   const [loading, setLoading] = useState(false);
@@ -58,67 +125,7 @@ function UserNotifications({ userId }) {
 
       const products = response.data.data || [];
 
-      const result = products
-        .map((product) => {
-          const stock = Number(product.stock) || 0;
-
-          const minimumStock = Number(product.minimum_stock) || 0;
-
-          // ==============================
-          // HABIS
-          // ==============================
-
-          if (stock <= 0) {
-            return {
-              id: `stock-out-${product.id}-${stock}`,
-
-              productId: product.id,
-
-              type: "out",
-
-              title: "Stok Habis",
-
-              message: `${product.name} (${product.code}) sudah habis.`,
-
-              stock,
-
-              priority: 1,
-            };
-          }
-
-          // ==============================
-          // MENIPIS
-          // ==============================
-
-          if (stock <= minimumStock) {
-            return {
-              id: `stock-low-${product.id}-${stock}`,
-
-              productId: product.id,
-
-              type: "low",
-
-              title: "Stok Menipis",
-
-              message: `${product.name} (${product.code}) tersisa ${stock}.`,
-
-              stock,
-
-              priority: 2,
-            };
-          }
-
-          return null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => {
-          if (a.priority !== b.priority) {
-            return a.priority - b.priority;
-          }
-
-          return a.message.localeCompare(b.message);
-        });
-
+      const result = buildStockNotifications(products);
       setNotifications(result);
     } catch (error) {
       console.error("Fetch notifications:", error);
@@ -134,8 +141,28 @@ function UserNotifications({ userId }) {
   // ==========================================================
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    // Ambil notifikasi awal tanpa memanggil fungsi yang mengubah state secara
+    // sinkron di dalam effect. Abaikan hasil ketika effect sudah dibersihkan.
+    let ignore = false;
+
+    api
+      .get("/products")
+      .then((response) => {
+        if (ignore) return;
+
+        setNotifications(buildStockNotifications(response.data.data || []));
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error("Fetch notifications:", error);
+        setError("Notifikasi gagal dimuat.");
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // ==========================================================
   // REFRESH SETIAP DROPDOWN DIBUKA

@@ -104,8 +104,32 @@ function AdminReports() {
   );
 
   useEffect(() => {
-    fetchReport();
-  }, [fetchReport]);
+    // Abaikan respons lama saat periode laporan berubah atau komponen dilepas.
+    let active = true;
+
+    api
+      .get("/reports/sales", { params: appliedFilters })
+      .then((response) => {
+        if (active) {
+          setReport(response.data.data);
+        }
+      })
+      .catch((error) => {
+        if (!active) return;
+
+        console.error("Report error:", error);
+        toast.error(error.response?.data?.message || "Gagal mengambil laporan");
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [appliedFilters]);
 
   // ==========================================================
   // FILTER

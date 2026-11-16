@@ -88,9 +88,54 @@ function AdminSales() {
   }, []);
 
   useEffect(() => {
-    fetchProducts();
-    fetchSales();
-  }, [fetchProducts, fetchSales]);
+    // Ambil data awal tanpa memanggil fungsi pengubah state secara sinkron.
+    // Abaikan respons jika effect sudah dibersihkan (mis. saat unmount).
+    let ignore = false;
+
+    api
+      .get("/products")
+      .then((response) => {
+        if (!ignore) {
+          setProducts(response.data.data || []);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error("Fetch products error:", error);
+        toast.error(error.response?.data?.message || "Gagal mengambil produk");
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoadingProducts(false);
+        }
+      });
+
+    api
+      .get("/sales")
+      .then((response) => {
+        if (!ignore) {
+          setSales(response.data.data || []);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error("Fetch sales error:", error);
+        toast.error(
+          error.response?.data?.message || "Gagal mengambil riwayat penjualan",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoadingSales(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // ==========================================================
   // FILTER PRODUCT
@@ -724,114 +769,116 @@ function CartItem({ item, onIncrease, onDecrease, onRemove }) {
 function SaleDetailModal({ sale, loading, onClose }) {
   return (
     <ModalPortal onClose={onClose}>
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Tutup detail transaksi"
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-      />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <button
+          type="button"
+          aria-label="Tutup detail transaksi"
+          onClick={onClose}
+          className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        />
 
-      <div className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
-          <div>
-            <h2 className="text-xl font-bold text-slate-950">
-              Detail Transaksi
-            </h2>
+        <div className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
+            <div>
+              <h2 className="text-xl font-bold text-slate-950">
+                Detail Transaksi
+              </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Informasi invoice penjualan.
-            </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Informasi invoice penjualan.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+            >
+              <X size={21} />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
-          >
-            <X size={21} />
-          </button>
-        </div>
+          {loading || !sale ? (
+            <div className="p-10 text-center text-sm text-slate-400">
+              Memuat detail...
+            </div>
+          ) : (
+            <div className="p-6">
+              <div className="rounded-2xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-white">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-blue-100">
+                      Invoice
+                    </p>
 
-        {loading || !sale ? (
-          <div className="p-10 text-center text-sm text-slate-400">
-            Memuat detail...
-          </div>
-        ) : (
-          <div className="p-6">
-            <div className="rounded-2xl bg-gradient-to-r from-blue-700 to-blue-500 p-6 text-white">
-              <div className="flex flex-col justify-between gap-4 sm:flex-row">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-blue-100">
-                    Invoice
-                  </p>
+                    <p className="mt-2 font-mono text-lg font-bold">
+                      {sale.invoice_number}
+                    </p>
 
-                  <p className="mt-2 font-mono text-lg font-bold">
-                    {sale.invoice_number}
-                  </p>
+                    <p className="mt-3 text-sm text-blue-100">
+                      {formatDateTime(sale.created_at)}
+                    </p>
+                  </div>
 
-                  <p className="mt-3 text-sm text-blue-100">
-                    {formatDateTime(sale.created_at)}
-                  </p>
-                </div>
+                  <div className="sm:text-right">
+                    <p className="text-xs text-blue-100">Total</p>
 
-                <div className="sm:text-right">
-                  <p className="text-xs text-blue-100">Total</p>
-
-                  <p className="mt-2 text-2xl font-bold">
-                    {formatRupiah(sale.total_amount)}
-                  </p>
+                    <p className="mt-2 text-2xl font-bold">
+                      {formatRupiah(sale.total_amount)}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <InfoBox label="Kasir" value={sale.cashier_name} />
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <InfoBox label="Kasir" value={sale.cashier_name} />
 
-              <InfoBox label="Role" value={sale.cashier_role} />
-            </div>
+                <InfoBox label="Role" value={sale.cashier_role} />
+              </div>
 
-            <div className="mt-6">
-              <h3 className="font-bold text-slate-900">Item Penjualan</h3>
+              <div className="mt-6">
+                <h3 className="font-bold text-slate-900">Item Penjualan</h3>
 
-              <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
-                <div className="divide-y divide-slate-100">
-                  {sale.items?.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-4 p-4"
-                    >
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {item.product_name}
-                        </p>
+                <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
+                  <div className="divide-y divide-slate-100">
+                    {sale.items?.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-4 p-4"
+                      >
+                        <div>
+                          <p className="font-semibold text-slate-900">
+                            {item.product_name}
+                          </p>
 
-                        <p className="mt-1 text-xs text-slate-400">
-                          {item.product_code} • {item.quantity} ×{" "}
-                          {formatRupiah(item.price)}
+                          <p className="mt-1 text-xs text-slate-400">
+                            {item.product_code} • {item.quantity} ×{" "}
+                            {formatRupiah(item.price)}
+                          </p>
+                        </div>
+
+                        <p className="shrink-0 font-bold text-slate-900">
+                          {formatRupiah(item.subtotal)}
                         </p>
                       </div>
-
-                      <p className="shrink-0 font-bold text-slate-900">
-                        {formatRupiah(item.subtotal)}
-                      </p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-6 flex items-center justify-between rounded-xl bg-slate-50 p-5">
-              <span className="font-semibold text-slate-600">Grand Total</span>
+              <div className="mt-6 flex items-center justify-between rounded-xl bg-slate-50 p-5">
+                <span className="font-semibold text-slate-600">
+                  Grand Total
+                </span>
 
-              <span className="text-2xl font-bold text-blue-700">
-                {formatRupiah(sale.total_amount)}
-              </span>
+                <span className="text-2xl font-bold text-blue-700">
+                  {formatRupiah(sale.total_amount)}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
     </ModalPortal>
   );
 }

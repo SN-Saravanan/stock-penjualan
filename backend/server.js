@@ -1,9 +1,13 @@
+const path = require("node:path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const { rateLimit } = require("express-rate-limit");
 
-dotenv.config({ path: require("node:path").join(__dirname, ".env"), quiet: true });
+dotenv.config({
+  path: require("node:path").join(__dirname, ".env"),
+  quiet: true,
+});
 
 const { pool, testDatabaseConnection } = require("./src/config/database");
 
@@ -68,9 +72,15 @@ app.use((req, res, next) => {
     req.body = {};
   }
 
-  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body) ||
-      Object.values(req.query).some((value) => typeof value !== "string")) {
-    return res.status(400).json({ success: false, message: "Format input tidak valid" });
+  if (
+    !req.body ||
+    typeof req.body !== "object" ||
+    Array.isArray(req.body) ||
+    Object.values(req.query).some((value) => typeof value !== "string")
+  ) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Format input tidak valid" });
   }
 
   next();
@@ -80,14 +90,21 @@ app.use((req, res, next) => {
 // API ROUTES
 // ============================================================
 
-app.use("/api/auth", rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 60,
-  skipSuccessfulRequests: true,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
-  message: { success: false, message: "Terlalu banyak percobaan. Coba kembali nanti." },
-}), authRoutes);
+app.use(
+  "/api/auth",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 60,
+    skipSuccessfulRequests: true,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message: "Terlalu banyak percobaan. Coba kembali nanti.",
+    },
+  }),
+  authRoutes,
+);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/stock", stockRoutes);
@@ -95,6 +112,37 @@ app.use("/api/sales", salesRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/users", userRoutes);
+
+// ============================================================
+// SERVE REACT PRODUCTION BUILD
+// ============================================================
+
+const frontendDistPath = path.resolve(__dirname, "../frontend/dist");
+
+if (!isDevelopment) {
+  app.use(express.static(frontendDistPath));
+}
+
+// ============================================================
+// REACT ROUTER SPA FALLBACK - EXPRESS 5
+// ============================================================
+
+if (!isDevelopment) {
+  app.get("/{*splat}", (req, res, next) => {
+    // Endpoint API yang tidak ditemukan tetap mendapat JSON 404.
+    if (req.path === "/api" || req.path.startsWith("/api/")) {
+      return next();
+    }
+
+    // Jangan mengembalikan HTML untuk asset yang tidak ditemukan.
+    if (path.extname(req.path)) {
+      return next();
+    }
+
+    return res.sendFile(path.join(frontendDistPath, "index.html"));
+  });
+}
+
 // ============================================================
 // ROOT ROUTE
 // ============================================================
@@ -187,12 +235,15 @@ const startServer = async () => {
     );
     process.exit(1);
   }
-  if (!isDevelopment && (
-    process.env.JWT_SECRET.length < 32 ||
-    /replace|generate-a-long|your[_-]?secret/i.test(process.env.JWT_SECRET) ||
-    !process.env.CLIENT_URL
-  )) {
-    console.error("Production requires a random JWT_SECRET (at least 32 characters) and CLIENT_URL");
+  if (
+    !isDevelopment &&
+    (process.env.JWT_SECRET.length < 32 ||
+      /replace|generate-a-long|your[_-]?secret/i.test(process.env.JWT_SECRET) ||
+      !process.env.CLIENT_URL)
+  ) {
+    console.error(
+      "Production requires a random JWT_SECRET (at least 32 characters) and CLIENT_URL",
+    );
     await pool.end();
     process.exitCode = 1;
     return;

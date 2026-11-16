@@ -109,12 +109,71 @@ function AdminStock() {
   }, [historyProductFilter, historyTypeFilter]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    let ignore = false;
+
+    api
+      .get("/products")
+      .then((response) => {
+        if (!ignore) {
+          setProducts(response.data.data || []);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error("Fetch stock products error:", error);
+        toast.error(
+          error.response?.data?.message || "Gagal mengambil data produk",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoadingProducts(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+    let ignore = false;
+    const params = {};
+
+    if (historyProductFilter) {
+      params.product_id = historyProductFilter;
+    }
+
+    if (historyTypeFilter) {
+      params.type = historyTypeFilter;
+    }
+
+    api
+      .get("/stock/history", { params })
+      .then((response) => {
+        if (!ignore) {
+          setHistory(response.data.data || []);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error("Fetch stock history error:", error);
+        toast.error(
+          error.response?.data?.message || "Gagal mengambil riwayat stok",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoadingHistory(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [historyProductFilter, historyTypeFilter]);
 
   // ==========================================================
   // FILTER STATE (level komponen)
@@ -960,178 +1019,178 @@ function StockUpdateModal({
 
   return (
     <ModalPortal onClose={onClose}>
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Tutup modal"
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-      />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <button
+          type="button"
+          aria-label="Tutup modal"
+          onClick={onClose}
+          className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        />
 
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <div>
-            <h2 className="text-xl font-bold text-slate-950">
-              Update Stok Barang
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              {product.code} — {product.name}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
-          >
-            <X size={21} />
-          </button>
-        </div>
-
-        <form onSubmit={onSubmit} className="p-6">
-          {/* PRODUCT INFO */}
-          <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4">
+        <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
             <div>
-              <p className="text-xs text-slate-400">Stok Saat Ini</p>
+              <h2 className="text-xl font-bold text-slate-950">
+                Update Stok Barang
+              </h2>
 
-              <p className="mt-1 text-xl font-bold text-slate-900">
-                {product.stock}
+              <p className="mt-1 text-sm text-slate-500">
+                {product.code} — {product.name}
               </p>
             </div>
 
-            <div>
-              <p className="text-xs text-slate-400">Minimum Stok</p>
-
-              <p className="mt-1 text-xl font-bold text-slate-900">
-                {product.minimum_stock}
-              </p>
-            </div>
-          </div>
-
-          {/* TYPE */}
-          <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Jenis Update
-            </label>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => onTypeChange("in")}
-                className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                  type === "in"
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                    : "border-slate-300 text-slate-600"
-                }`}
-              >
-                <ArrowUpCircle size={18} />
-                Tambah Stok
-              </button>
-
-              <button
-                type="button"
-                disabled={Number(product.stock) === 0}
-                onClick={() => onTypeChange("out")}
-                className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:opacity-40 ${
-                  type === "out"
-                    ? "border-amber-500 bg-amber-50 text-amber-700"
-                    : "border-slate-300 text-slate-600"
-                }`}
-              >
-                <ArrowDownCircle size={18} />
-                Kurangi Stok
-              </button>
-            </div>
-          </div>
-
-          {/* QUANTITY */}
-          <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Jumlah
-            </label>
-
-            <input
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={(event) => onQuantityChange(event.target.value)}
-              placeholder="Masukkan jumlah"
-              className="h-11 w-full rounded-xl border border-slate-300 px-4 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-            />
-
-            {type === "out" && numericQuantity > stockBefore && (
-              <p className="mt-2 text-xs font-medium text-red-600">
-                Jumlah melebihi stok tersedia.
-              </p>
-            )}
-          </div>
-
-          {/* STOCK PREVIEW */}
-          <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-center">
-            <div>
-              <p className="text-xs text-blue-500">Sebelum</p>
-
-              <p className="mt-1 text-xl font-bold text-blue-950">
-                {stockBefore}
-              </p>
-            </div>
-
-            <span className="text-blue-400">→</span>
-
-            <div>
-              <p className="text-xs text-blue-500">Sesudah</p>
-
-              <p className="mt-1 text-xl font-bold text-blue-950">
-                {stockAfter}
-              </p>
-            </div>
-          </div>
-
-          {/* NOTES */}
-          <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Catatan
-            </label>
-
-            <textarea
-              rows="3"
-              value={notes}
-              onChange={(event) => onNotesChange(event.target.value)}
-              placeholder="Contoh: Restock supplier..."
-              className="w-full resize-none rounded-xl border border-slate-300 p-4 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-            />
-          </div>
-
-          <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
             <button
               type="button"
               onClick={onClose}
-              disabled={submitting}
-              className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-600"
+              className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
             >
-              Batal
-            </button>
-
-            <button
-              type="submit"
-              disabled={
-                submitting ||
-                numericQuantity <= 0 ||
-                (type === "out" && numericQuantity > stockBefore)
-              }
-              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting
-                ? "Memproses..."
-                : type === "in"
-                  ? "Tambah Stok"
-                  : "Kurangi Stok"}
+              <X size={21} />
             </button>
           </div>
-        </form>
+
+          <form onSubmit={onSubmit} className="p-6">
+            {/* PRODUCT INFO */}
+            <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4">
+              <div>
+                <p className="text-xs text-slate-400">Stok Saat Ini</p>
+
+                <p className="mt-1 text-xl font-bold text-slate-900">
+                  {product.stock}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-slate-400">Minimum Stok</p>
+
+                <p className="mt-1 text-xl font-bold text-slate-900">
+                  {product.minimum_stock}
+                </p>
+              </div>
+            </div>
+
+            {/* TYPE */}
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Jenis Update
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => onTypeChange("in")}
+                  className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                    type === "in"
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                      : "border-slate-300 text-slate-600"
+                  }`}
+                >
+                  <ArrowUpCircle size={18} />
+                  Tambah Stok
+                </button>
+
+                <button
+                  type="button"
+                  disabled={Number(product.stock) === 0}
+                  onClick={() => onTypeChange("out")}
+                  className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:opacity-40 ${
+                    type === "out"
+                      ? "border-amber-500 bg-amber-50 text-amber-700"
+                      : "border-slate-300 text-slate-600"
+                  }`}
+                >
+                  <ArrowDownCircle size={18} />
+                  Kurangi Stok
+                </button>
+              </div>
+            </div>
+
+            {/* QUANTITY */}
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Jumlah
+              </label>
+
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(event) => onQuantityChange(event.target.value)}
+                placeholder="Masukkan jumlah"
+                className="h-11 w-full rounded-xl border border-slate-300 px-4 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+
+              {type === "out" && numericQuantity > stockBefore && (
+                <p className="mt-2 text-xs font-medium text-red-600">
+                  Jumlah melebihi stok tersedia.
+                </p>
+              )}
+            </div>
+
+            {/* STOCK PREVIEW */}
+            <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-center">
+              <div>
+                <p className="text-xs text-blue-500">Sebelum</p>
+
+                <p className="mt-1 text-xl font-bold text-blue-950">
+                  {stockBefore}
+                </p>
+              </div>
+
+              <span className="text-blue-400">→</span>
+
+              <div>
+                <p className="text-xs text-blue-500">Sesudah</p>
+
+                <p className="mt-1 text-xl font-bold text-blue-950">
+                  {stockAfter}
+                </p>
+              </div>
+            </div>
+
+            {/* NOTES */}
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Catatan
+              </label>
+
+              <textarea
+                rows="3"
+                value={notes}
+                onChange={(event) => onNotesChange(event.target.value)}
+                placeholder="Contoh: Restock supplier..."
+                className="w-full resize-none rounded-xl border border-slate-300 p-4 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-600"
+              >
+                Batal
+              </button>
+
+              <button
+                type="submit"
+                disabled={
+                  submitting ||
+                  numericQuantity <= 0 ||
+                  (type === "out" && numericQuantity > stockBefore)
+                }
+                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting
+                  ? "Memproses..."
+                  : type === "in"
+                    ? "Tambah Stok"
+                    : "Kurangi Stok"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
     </ModalPortal>
   );
 }

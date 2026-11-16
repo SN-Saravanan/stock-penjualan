@@ -49,20 +49,47 @@ function EmployeeProducts() {
     }
   }, []);
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const response = await api.get("/categories");
-
-      setCategories(response.data.data || []);
-    } catch (error) {
-      console.error(error);
-    }
-  }, []);
-
+  // Fetch data awal secara asinkron, dengan cleanup untuk mengabaikan
+  // respons request ketika komponen sudah dilepas.
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, [fetchProducts, fetchCategories]);
+    let ignore = false;
+
+    api
+      .get("/products")
+      .then((response) => {
+        if (!ignore) {
+          setProducts(response.data.data || []);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error(error);
+        toast.error(error.response?.data?.message || "Gagal mengambil produk");
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    api
+      .get("/categories")
+      .then((response) => {
+        if (!ignore) {
+          setCategories(response.data.data || []);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) {
+          console.error(error);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // ==========================================================
   // FILTER
@@ -276,72 +303,77 @@ function EmployeeProducts() {
 function ProductDetailModal({ product, onClose }) {
   return (
     <ModalPortal onClose={onClose}>
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-      />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        />
 
-      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 p-5">
-          <div>
-            <h2 className="text-xl font-bold text-slate-950">Detail Produk</h2>
+        <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+          <div className="flex items-center justify-between border-b border-slate-200 p-5">
+            <div>
+              <h2 className="text-xl font-bold text-slate-950">
+                Detail Produk
+              </h2>
 
-            <p className="mt-1 font-mono text-xs text-blue-600">
-              {product.code}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
-          >
-            <X size={21} />
-          </button>
-        </div>
-
-        <div className="space-y-5 p-6">
-          <div>
-            <p className="text-xs uppercase text-slate-400">Nama Produk</p>
-
-            <p className="mt-2 text-lg font-bold text-slate-900">
-              {product.name}
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DetailItem label="Kategori" value={product.category_name || "-"} />
-
-            <DetailItem
-              label="Harga Jual"
-              value={formatRupiah(product.selling_price)}
-            />
-
-            <DetailItem label="Stok" value={product.stock} />
-
-            <DetailItem label="Minimum Stok" value={product.minimum_stock} />
-          </div>
-
-          <div>
-            <p className="text-xs uppercase text-slate-400">Status</p>
-
-            <div className="mt-2">
-              <StockBadge status={product.stock_status} />
+              <p className="mt-1 font-mono text-xs text-blue-600">
+                {product.code}
+              </p>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+            >
+              <X size={21} />
+            </button>
           </div>
 
-          <div>
-            <p className="text-xs uppercase text-slate-400">Deskripsi</p>
+          <div className="space-y-5 p-6">
+            <div>
+              <p className="text-xs uppercase text-slate-400">Nama Produk</p>
 
-            <p className="mt-2 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-              {product.description || "Tidak ada deskripsi."}
-            </p>
+              <p className="mt-2 text-lg font-bold text-slate-900">
+                {product.name}
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <DetailItem
+                label="Kategori"
+                value={product.category_name || "-"}
+              />
+
+              <DetailItem
+                label="Harga Jual"
+                value={formatRupiah(product.selling_price)}
+              />
+
+              <DetailItem label="Stok" value={product.stock} />
+
+              <DetailItem label="Minimum Stok" value={product.minimum_stock} />
+            </div>
+
+            <div>
+              <p className="text-xs uppercase text-slate-400">Status</p>
+
+              <div className="mt-2">
+                <StockBadge status={product.stock_status} />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs uppercase text-slate-400">Deskripsi</p>
+
+              <p className="mt-2 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                {product.description || "Tidak ada deskripsi."}
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </ModalPortal>
   );
 }

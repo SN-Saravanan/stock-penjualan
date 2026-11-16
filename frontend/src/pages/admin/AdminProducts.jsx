@@ -60,18 +60,6 @@ function AdminProducts() {
   // FETCH CATEGORIES
   // ==========================================================
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const response = await api.get("/categories");
-
-      setCategories(response.data.data || []);
-    } catch (error) {
-      console.error("Categories error:", error);
-
-      toast.error("Gagal mengambil kategori");
-    }
-  }, []);
-
   // ==========================================================
   // FETCH PRODUCTS
   // ==========================================================
@@ -119,9 +107,26 @@ function AdminProducts() {
     [search, categoryFilter, stockFilter],
   );
 
+  // Ambil kategori saat komponen dimuat.
+  // Abaikan respons dari effect yang sudah dibersihkan.
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    let ignore = false;
+    api
+      .get("/categories")
+      .then((response) => {
+        if (!ignore) {
+          setCategories(response.data.data || []);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+        console.error("Categories error:", error);
+        toast.error("Gagal mengambil kategori");
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // Sedikit debounce untuk search
   useEffect(() => {
@@ -310,8 +315,7 @@ function AdminProducts() {
       await toastPromise(api.delete(`/products/${deleteProduct.id}`), {
         loading: "Menghapus produk...",
         success: "Produk berhasil dihapus",
-        error: (err) =>
-          err.response?.data?.message || "Produk gagal dihapus",
+        error: (err) => err.response?.data?.message || "Produk gagal dihapus",
       });
 
       setDeleteProduct(null);
@@ -901,18 +905,18 @@ function DeleteModal({ product, loading, onCancel, onConfirm }) {
 function ModalWrapper({ children, onClose }) {
   return (
     <ModalPortal onClose={onClose}>
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Tutup modal"
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-      />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <button
+          type="button"
+          aria-label="Tutup modal"
+          onClick={onClose}
+          className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        />
 
-      <div className="modal-wrapper relative z-10 flex w-full justify-center">
-        {children}
+        <div className="modal-wrapper relative z-10 flex w-full justify-center">
+          {children}
+        </div>
       </div>
-    </div>
     </ModalPortal>
   );
 }

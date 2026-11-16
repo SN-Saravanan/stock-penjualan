@@ -88,8 +88,34 @@ function AdminUsers() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    // Abaikan respons request jika komponen sudah dibersihkan.
+    let ignore = false;
+
+    api
+      .get("/users")
+      .then((response) => {
+        if (!ignore) {
+          setUsers(response.data.data || []);
+        }
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        console.error("Fetch users error:", error);
+        toast.error(
+          error.response?.data?.message || "Gagal mengambil data user",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // ==========================================================
   // FILTER
@@ -205,8 +231,7 @@ function AdminUsers() {
         await toastPromise(api.post("/users", userForm), {
           loading: "Menyimpan user...",
           success: "User berhasil ditambahkan",
-          error: (err) =>
-            err.response?.data?.message || "Gagal menyimpan user",
+          error: (err) => err.response?.data?.message || "Gagal menyimpan user",
         });
       } else {
         await toastPromise(
@@ -332,8 +357,7 @@ function AdminUsers() {
       await toastPromise(api.delete(`/users/${deleteTarget.id}`), {
         loading: "Menghapus user...",
         success: "User berhasil dihapus",
-        error: (err) =>
-          err.response?.data?.message || "Gagal menghapus user",
+        error: (err) => err.response?.data?.message || "Gagal menghapus user",
       });
 
       setDeleteTarget(null);
@@ -632,7 +656,9 @@ function AdminUsers() {
           selectedUser={selectedUser}
           submitting={submitting}
           onChange={handleUserChange}
-          onClose={() => { if (!submitting) setUserModal(null); }}
+          onClose={() => {
+            if (!submitting) setUserModal(null);
+          }}
           onSubmit={saveUser}
         />
       )}
@@ -649,7 +675,9 @@ function AdminUsers() {
               [event.target.name]: event.target.value,
             }))
           }
-          onClose={() => { if (!submitting) setResetUser(null); }}
+          onClose={() => {
+            if (!submitting) setResetUser(null);
+          }}
           onSubmit={submitResetPassword}
         />
       )}
@@ -658,7 +686,9 @@ function AdminUsers() {
         <DeleteUserModal
           user={deleteTarget}
           submitting={submitting}
-          onClose={() => { if (!submitting) setDeleteTarget(null); }}
+          onClose={() => {
+            if (!submitting) setDeleteTarget(null);
+          }}
           onConfirm={confirmDelete}
         />
       )}
@@ -975,15 +1005,17 @@ function ActionButton({ children, title, className, onClick, disabled }) {
 function ModalWrapper({ children, onClose }) {
   return (
     <ModalPortal onClose={onClose}>
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
-      />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        />
 
-      <div className="modal-wrapper relative z-10 flex w-full justify-center">{children}</div>
-    </div>
+        <div className="modal-wrapper relative z-10 flex w-full justify-center">
+          {children}
+        </div>
+      </div>
     </ModalPortal>
   );
 }
