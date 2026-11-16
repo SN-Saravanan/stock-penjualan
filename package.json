@@ -1,0 +1,12 @@
+{
+  "name": "stock-penjualan-deployment",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node backend/server.js",
+    "install:backend": "npm ci --prefix backend --omit=dev",
+    "install:frontend": "npm ci --prefix frontend --include=dev",
+    "build:frontend": "npm run build --prefix frontend",
+    "deploy:prepare": "npm run install:backend && npm run install:frontend && npm run build:frontend"
+  }
+}
